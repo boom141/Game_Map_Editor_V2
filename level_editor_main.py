@@ -1,5 +1,5 @@
 from Tile_list import*
-import pygame, sys, os
+import pygame, sys, os, csv
 
 pygame.init()
 
@@ -22,6 +22,8 @@ left = False
 right = False
 Tile = True
 Decor = False
+save = False
+load = False
 
 folder_name = 'set1'
 file_name = 'tile'
@@ -56,25 +58,55 @@ def Render_Tile_List():
     
     return Tile_Set
 
-def Render_Map(Map_Data,Mouse_Pos):
+def Render_Map(Map_Data):
+    Canvas.fill((0,0,0))
+    for data in Decoration_Data:
+        image = pygame.image.load(os.path.join('set2', f'deco{data[0]}.png'))
+        image.set_colorkey((0,0,0))
+        Canvas.blit(image,(data[1],data[2]))
+
     for y, col in enumerate(Map_Data):
         for x, row in enumerate(col):
             if row > -1:
                 image = pygame.image.load(os.path.join('set1', f'tile{row}.png'))
                 image.set_colorkey((0,0,0))
                 Canvas.blit(pygame.transform.scale(image,(36,36)),(x*TILE_SIZE, y*TILE_SIZE))
-            else:
-                pygame.draw.rect(Canvas, ((0,0,0)), (x*TILE_SIZE, y*TILE_SIZE,36,36))
-    for data in Decoration_Data:
-        image = pygame.image.load(os.path.join('set2', f'deco{data[0]}.png'))
-        image.set_colorkey((0,0,0))
-        Canvas.blit(image,(data[1],data[2]))
 
 def Check_Duplicate(list,coordinate):
     if coordinate in list:
         return True
     else:
         return False
+
+def Save_Map():
+    global save
+    file_name = input('SAVE MAP NAME: ')
+    with open(f'save_map/{file_name}.csv', 'w', newline='') as map_data:
+        writer = csv.writer(map_data, delimiter=',')
+        for row in Map_Data:
+            writer.writerow(row)
+    with open(f'save_map/{file_name}_decoration.csv', 'w', newline='') as decoration_data:
+        writer = csv.writer(decoration_data, delimiter=',')
+        for item in Decoration_Data:
+            writer.writerow(item)
+    print('SAVE COMPLETE!')
+    save = False
+    
+def Load_Map():
+    global load
+    file_name = input('LOAD MAP NAME: ')
+    with open(f'save_map/{file_name}.csv', newline='') as map_data:
+        reader = csv.reader(map_data, delimiter=',')
+        for y, row in enumerate(reader):
+            for x, tile in enumerate(row):
+              Map_Data[y][x] = int(tile)
+    with open(f'save_map/{file_name}_decoration.csv', 'r', encoding='utf-8') as decoration_data:
+        for data in decoration_data:
+            elements = data.split(',')
+            Decoration_Data.append([int(elements[0]),int(elements[1]),int(elements[2])])
+    print('LOAD COMPLETE!')
+    load = False
+
 
 while True:
     Game_Window.fill('gray')
@@ -103,6 +135,11 @@ while True:
                 if not verify:
                     Decoration_Data.append([Selected_Tile,x,y])
                     
+    if save:
+        Save_Map()
+    elif load:
+        Load_Map()
+   
     s_movement = [0,0]
     if up:
         s_movement[1] -= SNAP * 1
@@ -118,7 +155,7 @@ while True:
     INITIAL_POINT[1] -= s_movement[1]
     Game_Window.blit(Canvas,(INITIAL_POINT[0],INITIAL_POINT[1]))
     
-    Render_Map(Map_Data,Mouse_Pos)
+    Render_Map(Map_Data)
     Tile_Set = Render_Tile_List()
     
     for tile in Tile_Set:
@@ -159,6 +196,10 @@ while True:
                 left = True
             if event.key == pygame.K_RIGHT:
                 right = True
+            if event.key == pygame.K_s:
+                save = True
+            if event.key == pygame.K_l:
+                load = True
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP:    
@@ -169,6 +210,7 @@ while True:
                 left = False
             if event.key == pygame.K_RIGHT:
                 right = False
+
         
     pygame.display.update()
     fps.tick(60)
